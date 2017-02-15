@@ -9,7 +9,7 @@ import gzip
 import pickle
 import os
 import time
-import model1
+import model2
 
 ####PARAMS######
 top = 70  # Use only the top "x" labels, frequency wise
@@ -41,7 +41,7 @@ rng.shuffle(shuffle_inds)  # Shuffling the data
 vectors = vectors[shuffle_inds][:, :top].astype(theano.config.floatX)
 spectrograms = np.expand_dims(spectrograms[shuffle_inds], axis=1)  # Extra axis for the channel
 ##############################################
-model = model1.get_model(model_input_shape, top, rng)
+model = model2.get_model(model_input_shape, top, rng)
 train_indices = np.arange(int(np.sum(Train_sizes)))
 rng.shuffle(train_indices)
 ###################################Building the optimizer##############################################
