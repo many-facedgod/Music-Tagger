@@ -10,7 +10,7 @@ import logging
 # PARAMS:
 epsilon = 1e-20  # for log clipping
 log = np.log  # the log function
-n = 1000  # number of spectrograms required. Total = 25863
+n = 30  # number of spectrograms required. Total = 25863
 sr = 11025  # sampling rate
 base_path = "/media/tanmaya/01CFA9F3FE6BF9F0/Downloads/MagnaTagATune"  # The path of the dataset root
 _type = np.float32  # The dtype of the spectrogram arrays
