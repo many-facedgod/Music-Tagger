@@ -9,8 +9,8 @@ from os.path import join, isdir, isfile
 from zipfile import ZipFile
 
 mp3_urls = ['http://mi.soi.city.ac.uk/datasets/magnatagatune/mp3.zip.001',
-             'http://mi.soi.city.ac.uk/datasets/magnatagatune/mp3.zip.002',
-             'http://mi.soi.city.ac.uk/datasets/magnatagatune/mp3.zip.003']
+            'http://mi.soi.city.ac.uk/datasets/magnatagatune/mp3.zip.002',
+            'http://mi.soi.city.ac.uk/datasets/magnatagatune/mp3.zip.003']
 
 tags_url = 'http://mi.soi.city.ac.uk/datasets/magnatagatune/annotations_final.csv'
 

@@ -6,6 +6,7 @@ import warnings
 import librosa
 import numpy as np
 
+from multiprocessing import Process
 from os.path import join
 
 from tqdm import tqdm
@@ -15,6 +16,7 @@ epsilon = 1e-20  # for log clipping
 n_specs = None  # number of spectrograms required. None for all
 sampling_rate = 11025  # sampling rate
 base_path = '../data'  # The path of the dataset root
+n_workers = 4  # The number of chunks to divide the dataset into
 '''------------------------------------------------------------------------------'''
 
 problematic = [16250, 24867, 25546]  # The files that cannot be opened
@@ -38,27 +40,44 @@ def read_tags():
     return ids, tags, filepaths, tag_names
 
 
+def worker_fn(filepaths, start_index, worker_id):
+    """Function for generating one chunk of the data."""
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        spectrograms = None
+        size = None
+        bar = tqdm(enumerate(filepaths, start_index), total=len(filepaths), position=worker_id)
+        bar.set_description('Worker {}'.format(worker_id))
+        for index, path in bar:
+            if index in problematic:
+                spectrograms[index - start_index] = np.zeros(size, dtype=np.float32)
+                continue
+            signal, rate = librosa.load(join(base_path, path), sr=sampling_rate)
+            log_spectrogram = np.log(np.clip(librosa.feature.melspectrogram(signal, rate),
+                                             epsilon, np.inf)).astype(np.float32)
+            if index == start_index:
+                size = log_spectrogram.shape
+                spectrograms = np.empty((len(filepaths), size[0], size[1]), dtype=np.float32)
+            spectrograms[index - start_index] = log_spectrogram
+        if not worker_id:
+            tqdm.write('\n\n\n\n\nMaximum log amplitude: {}'.format(spectrograms.max()))
+            tqdm.write('Minimum log amplitude: {}'.format(spectrograms.min()))
+            tqdm.write('Mean log amplitude: {}'.format(spectrograms.mean()))
+            tqdm.write('Std. log amplitude: {}'.format(spectrograms.std()))
+            tqdm.write('Spectrogram shape: {}'.format(size))
+        np.save(join(base_path, 'spectrograms_{}.npy'.format(worker_id)), spectrograms)
+
+
 def generate_spectrograms(filepaths):
-    print('Generating Spectrograms...')
-    spectrograms = None
-    size = None
-    for index, path in tqdm(enumerate(filepaths), total=len(filepaths)):
-        if index in problematic:
-            spectrograms[index] = np.zeros(size, dtype=np.float32)
-            continue
-        signal, rate = librosa.load(join(base_path, path), sr=sampling_rate)
-        log_spectrogram = np.log(np.clip(librosa.feature.melspectrogram(signal, rate), epsilon, np.inf)).astype(np.float32)
-        if not index:
-            size = log_spectrogram.shape
-            spectrograms = np.empty((len(filepaths), size[0], size[1]), dtype=np.float32)
-        spectrograms[index] = log_spectrogram
-    print('Spectrograms generated')
-    print('Maximum log amplitude: {}'.format(spectrograms.max()))
-    print('Minimum log amplitude: {}'.format(spectrograms.min()))
-    print('Mean log amplitude: {}'.format(spectrograms.mean()))
-    print('Std. log amplitude: {}'.format(spectrograms.std()))
-    print('Spectrogram shape: {}'.format(size))
-    return spectrograms
+    """Starts multiple workers to generate the spectrograms in parallel."""
+    print('Generating spectrograms...')
+    chunk_size = (len(filepaths) - 1) // n_workers + 1
+    workers = [Process(target=worker_fn, args=(filepaths[i * chunk_size: (i + 1) * chunk_size],
+                                               i * chunk_size, i)) for i in range(n_workers)]
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join()
 
 
 def main():
@@ -68,11 +87,7 @@ def main():
     np.save(join(base_path, 'ids.npy'), ids[:num_specs])
     np.save(join(base_path, 'tag_names.npy'), tag_names)
     filepaths = filepaths[:num_specs]
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        spectrograms = generate_spectrograms(filepaths)
-        print('Dumping spectrograms...')
-        np.save(join(base_path, 'spectrograms.npy'), spectrograms)
+    generate_spectrograms(filepaths)
 
 
 if __name__ == '__main__':
