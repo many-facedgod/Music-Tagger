@@ -16,7 +16,7 @@ epsilon = 1e-20  # for log clipping
 n_specs = None  # number of spectrograms required. None for all
 sampling_rate = 11025  # sampling rate
 base_path = '../data'  # The path of the dataset root
-n_workers = 4  # The number of chunks to divide the dataset into
+n_workers = 8  # The number of chunks to divide the dataset into
 '''------------------------------------------------------------------------------'''
 
 problematic = [16250, 24867, 25546]  # The files that cannot be opened
