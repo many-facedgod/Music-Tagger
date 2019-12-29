@@ -109,6 +109,7 @@ def remove_syn(tags, tag_names):
 
 
 def load_data():
+    print('Loading data...')
     data_chunks = [np.load(join(data_path, 'spectrograms_{}.npy'.format(i))) for i in range(n_data_chunks)]
     data = np.concatenate(data_chunks, axis=0)
     del data_chunks
@@ -125,6 +126,7 @@ def load_data():
     freq_order = np.argsort(frequencies)[::-1][:n_tags]
     tags = tags[:, freq_order]
     tag_names = np.array(tag_names)[freq_order]
+    print('Data loaded.')
     return data[:, None, :, :], tags, tag_names
 
 
@@ -173,11 +175,13 @@ def train(data, tags):
         tqdm.write('Test AUC score: {}'.format(test_score))
         test_aucs.append(test_score)
         if validation_score - validation_aucs[-1] < lr_decay_auc_threshold:
+            print('Decaying learning rate by {}'.format(lr_decay_factor))
             optimizer.set_learning_rate(optimizer.get_learning_rate() / lr_decay_factor)
         if validation_score > np.max(validation_aucs):
             with open('../experiments/best_model.pkl', 'wb') as f:
                 mscnn.save(f)
-    tqdm.write('\nTest AUC score corresponding to best val score: {}'.format(test_aucs[np.argmax(validation_aucs)]))
+        validation_aucs.append(validation_score)
+    tqdm.write('\n\nTest AUC score corresponding to best val score: {}'.format(test_aucs[np.argmax(validation_aucs)]))
     tqdm.write('Best test score: {}'.format(np.max(test_aucs)))
 
 
