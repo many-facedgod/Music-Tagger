@@ -100,6 +100,12 @@ def get_model(input_shape, n_outputs, rng):
 
 
 def remove_syn(tags, tag_names):
+    """
+    Merge the synonymous tags
+    :param tags: The binary matrix representing the tags
+    :param tag_names: The names of the tags
+    :return: The merged matrix and the names
+    """
     flattened_syn = set(itertools.chain(*synonyms))
     tag_ids = [[tag_names.index(name)] for name in (set(tag_names) - flattened_syn)] + [list(map(tag_names.index,
                                                                                                  names))
@@ -109,6 +115,10 @@ def remove_syn(tags, tag_names):
 
 
 def load_data():
+    """
+    Load the training data. Also merges the tags and normalizes the data.
+    :return: The loaded spectrograms, the labels, and the tag names.
+    """
     tqdm.write('Loading data...')
     data_chunks = [np.load(join(data_path, 'spectrograms_{}.npy'.format(i))) for i in range(n_data_chunks)]
     data = np.concatenate(data_chunks, axis=0)
@@ -131,11 +141,21 @@ def load_data():
 
 
 def train(data, tags):
+    """
+    Train the models using the parameters defined in the parameters section
+    :param data: The spectrograms
+    :param tags: The labels
+    """
+
+    # The model is saved in the experiments directory
     if not isdir('../experiments'):
         mkdir('../experiments')
+
     data_size = len(data)
     test_size = data_size - (train_size + validation_size)
     assert test_size > 0, 'Not enough data'
+
+    # Initializing the model, the data and the runners for validation and testing
     mscnn = get_model(data[0].shape, n_tags, rng)
     indices = np.arange(data_size)
     rng.shuffle(indices)
@@ -152,6 +172,8 @@ def train(data, tags):
     total_batches = sum(n_batches)
     validator = mscnn.get_runner(data[validation_indices], tags[validation_indices])
     tester = mscnn.get_runner(data[test_indices], tags[test_indices])
+
+    # The training loop
     mscnn.change_is_training(False)
     validation_aucs = [validator.auc_score(at_a_time=batch_size)]
     test_aucs = [tester.auc_score(at_a_time=batch_size)]
@@ -167,6 +189,8 @@ def train(data, tags):
                 loss = optimizer.train_step(order[k * batch_size: (k + 1) * batch_size])
                 bar.set_description('Iteration {}:- Curr loss: {}'.format(i + 1, loss))
                 bar.update()
+        bar.close()
+
         rng.shuffle(train_indices)
         mscnn.change_is_training(False)
         validation_score = validator.auc_score(at_a_time=batch_size)
@@ -174,14 +198,16 @@ def train(data, tags):
         tqdm.write('Validation AUC score: {}'.format(validation_score))
         tqdm.write('Test AUC score: {}'.format(test_score))
         test_aucs.append(test_score)
-        if (i + 1) in lr_decay_iters:
+
+        if (i + 1) in lr_decay_iters:  # decaying according to the schedule
             tqdm.write('Decaying learning rate by {}'.format(lr_decay_factor))
             optimizer.set_learning_rate(optimizer.get_learning_rate() / lr_decay_factor)
-        if validation_score > np.max(validation_aucs):
+
+        if validation_score > np.max(validation_aucs):  # saving the best model
             with open('../experiments/best_model.pkl', 'wb') as f:
                 mscnn.save(f)
         validation_aucs.append(validation_score)
-    tqdm.write('\n\nTest AUC score corresponding to best val score: {}'.format(test_aucs[np.argmax(validation_aucs)]))
+    tqdm.write('Test AUC score corresponding to best val score: {}'.format(test_aucs[np.argmax(validation_aucs)]))
     tqdm.write('Best test score: {}'.format(np.max(test_aucs)))
 
 
