@@ -201,7 +201,7 @@ def train(data, tags):
 
         if (i + 1) in lr_decay_iters:  # decaying according to the schedule
             tqdm.write('Decaying learning rate by {}'.format(lr_decay_factor))
-            optimizer.set_learning_rate(optimizer.get_learning_rate() / lr_decay_factor)
+            optimizer.set_learning_rate(np.array(optimizer.get_learning_rate() / lr_decay_factor, dtype=np.float32))
 
         if validation_score > np.max(validation_aucs):  # saving the best model
             with open('../experiments/best_model.pkl', 'wb') as f:
