@@ -15,7 +15,7 @@ from totem import *
 learning_rate = 0.001  # learning rate for training the model
 l2_regularization = 0.0  # L2 regularization
 lr_decay_factor = 10  # learning rate decay factor
-lr_decay_auc_threshold = 0.001  # Threshold for delta validation AUC score to decay lr
+lr_decay_iters = [20, 30, 35]  # Threshold for delta validation AUC score to decay lr
 normalize = True  # normalize the data or not
 normalization_axes = (0, 2)  # The axes for normalization
 merge_tags = True  # merge the tags or not
@@ -109,7 +109,7 @@ def remove_syn(tags, tag_names):
 
 
 def load_data():
-    print('Loading data...')
+    tqdm.write('Loading data...')
     data_chunks = [np.load(join(data_path, 'spectrograms_{}.npy'.format(i))) for i in range(n_data_chunks)]
     data = np.concatenate(data_chunks, axis=0)
     del data_chunks
@@ -126,7 +126,7 @@ def load_data():
     freq_order = np.argsort(frequencies)[::-1][:n_tags]
     tags = tags[:, freq_order]
     tag_names = np.array(tag_names)[freq_order]
-    print('Data loaded.')
+    tqdm.write('Data loaded.')
     return data[:, None, :, :], tags, tag_names
 
 
@@ -171,11 +171,11 @@ def train(data, tags):
         mscnn.change_is_training(False)
         validation_score = validator.auc_score(at_a_time=batch_size)
         test_score = tester.auc_score(at_a_time=batch_size)
-        tqdm.write('\nValidation AUC score: {}'.format(validation_score))
+        tqdm.write('Validation AUC score: {}'.format(validation_score))
         tqdm.write('Test AUC score: {}'.format(test_score))
         test_aucs.append(test_score)
-        if validation_score - validation_aucs[-1] < lr_decay_auc_threshold:
-            print('Decaying learning rate by {}'.format(lr_decay_factor))
+        if (i + 1) in lr_decay_iters:
+            tqdm.write('Decaying learning rate by {}'.format(lr_decay_factor))
             optimizer.set_learning_rate(optimizer.get_learning_rate() / lr_decay_factor)
         if validation_score > np.max(validation_aucs):
             with open('../experiments/best_model.pkl', 'wb') as f:
