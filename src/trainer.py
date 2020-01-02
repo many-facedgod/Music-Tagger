@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import itertools
+import sys
 
 import numpy as np
 
@@ -178,7 +179,7 @@ def train(data, tags):
     validation_aucs = [validator.auc_score(at_a_time=batch_size)]
     test_aucs = [tester.auc_score(at_a_time=batch_size)]
     for i in range(n_iters):
-        bar = tqdm(total=total_batches, desc='Iteration {}:- Curr loss: NaN'.format(i + 1))
+        bar = tqdm(total=total_batches, desc='Iteration {}:- Curr loss: NaN'.format(i + 1), file=sys.stdout)
         mscnn.change_is_training(True)
         for j in range(n_super_batches):
             n_batch = n_batches[j]

@@ -1,6 +1,7 @@
 from __future__ import division
 from __future__ import print_function
 
+import sys
 import warnings
 
 import librosa
@@ -46,7 +47,7 @@ def worker_fn(filepaths, start_index, worker_id):
         warnings.simplefilter('ignore')
         spectrograms = None
         size = None
-        bar = tqdm(enumerate(filepaths, start_index), total=len(filepaths), position=worker_id)
+        bar = tqdm(enumerate(filepaths, start_index), total=len(filepaths), position=worker_id, file=sys.stdout)
         bar.set_description('Worker {}'.format(worker_id))
         for index, path in bar:
             if index in problematic:
